@@ -1,30 +1,31 @@
 import React, { useState } from "react";
+import { useSpring, useSprings, animated } from 'react-spring';
 import "./App.css";
 
 function App() {
   const suits = ["Hearts", "Diamonds", "Clubs", "Spades"];
   const ranks = [
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "Jack",
-    "Queen",
-    "King",
-    "Ace",
+    "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    "Jack", "Queen", "King", "Ace",
   ];
 
-  const [deck, setDeck] = useState(createDeck());
+  const [deck, setDeck] = useState([]);
   const [playerHand, setPlayerHand] = useState([]);
   const [dealerHand, setDealerHand] = useState([]);
   const [dealerVisible, setDealerVisible] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [playerWon, setPlayerWon] = useState(null);
+
+  // Initialize the deck
+  useState(() => {
+    setDeck(createDeck());
+  }, []);
+
+  const [playerSprings, api] = useSprings(playerHand.length, index => ({
+    from: { transform: 'translateX(-100px)', opacity: 0 },
+    to: { transform: 'translateX(0)', opacity: 1 },
+    delay: index * 100,
+  }), [playerHand.length]); // Recalculate when playerHand.length changes
 
   function createDeck() {
     let newDeck = [];
@@ -61,16 +62,17 @@ function App() {
 
   function startGame() {
     const newDeck = createDeck();
-    const playerHand = [newDeck.pop(), newDeck.pop()];
-    const dealerHand = [newDeck.pop()]; // Dealer starts with one card visible
-
+    const playerInitialHand = [newDeck.pop(), newDeck.pop()];
+    const dealerInitialHand = [newDeck.pop(), newDeck.pop()]; // Assume the first card is meant to be hidden initially
+  
     setDeck(newDeck);
-    setPlayerHand(playerHand);
-    setDealerHand(dealerHand);
-    setDealerVisible(false); // Dealer's second card is not visible yet
+    setPlayerHand(playerInitialHand);
+    setDealerHand(dealerInitialHand);
+    setDealerVisible(false); // Initially, the dealer's first card is hidden
     setGameOver(false);
     setPlayerWon(null);
   }
+  
 
   function hit() {
     if (!gameOver) {
@@ -132,12 +134,13 @@ function App() {
         <div className="hand">
           <h2>Player's Hand ({getHandValue(playerHand)})</h2>
           <div className="cards">
-            {playerHand.map((card, index) => (
-              <img
-                key={index}
-                src={card.image}
-                alt={`${card.rank} of ${card.suit}`}
-              />
+            {playerSprings.map((styles, index) => (
+              <animated.div style={styles} key={index}>
+                <img
+                  src={playerHand[index].image}
+                  alt={`${playerHand[index].rank} of ${playerHand[index].suit}`}
+                />
+              </animated.div>
             ))}
           </div>
           {!gameOver && (
@@ -148,28 +151,16 @@ function App() {
           )}
         </div>
         <div className="hand">
-          <h2>
-            Dealer's Hand ({dealerVisible ? getHandValue(dealerHand) : "?"})
-          </h2>
+          <h2>Dealer's Hand ({dealerVisible ? getHandValue(dealerHand) : '?'})</h2>
           <div className="cards">
             {dealerHand.map((card, index) => (
               <img
                 key={index}
-                src={
-                  dealerVisible || index === 0
-                    ? card.image
-                    : "/PNG-cards-1.3/cardback.png"
-                }
-                alt={
-                  dealerVisible || index === 0
-                    ? `${card.rank} of ${card.suit}`
-                    : "Hidden Card"
-                }
+                className="card"
+                src={dealerVisible || index === 0 ? card.image : "/PNG-cards-1.3/cardback.png"}
+                alt={dealerVisible || index === 0 ? `${card.rank} of ${card.suit}` : "Hidden Card"}
               />
             ))}
-            {!dealerVisible && (
-              <img src="/PNG-cards-1.3/cardback.png" alt="Hidden Card" />
-            )}
           </div>
         </div>
         {gameOver && (
